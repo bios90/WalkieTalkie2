@@ -144,7 +144,7 @@ class ActPeersList : BaseActivity() {
         )
     }
 
-    private fun toActCall(args: ActCall.Args) = Intent(this, ActTestMessages::class.java)
+    private fun toActCall(args: ActCall.Args) = Intent(this, ActTestMessages2::class.java)
         .apply { purArgs(args) }
         .apply(::startActivity)
 }

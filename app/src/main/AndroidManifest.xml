@@ -36,6 +36,7 @@
         <activity android:name=".ActPeersList" />
         <activity android:name=".ActCall" />
         <activity android:name=".ActTestMessages" />
+        <activity android:name=".ActTestMessages2" />
 
         <service android:name=".common.SocketService" />
     </application>

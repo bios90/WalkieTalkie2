@@ -11,7 +11,6 @@ import androidx.lifecycle.lifecycleScope
 import com.bios.walkietalkie2.common.BaseActivity
 import com.bios.walkietalkie2.databinding.ActWelcomeBinding
 import com.bios.walkietalkie2.utils.AudioUtils
-import com.bios.walkietalkie2.utils.AudioUtils.SAMPLE_RATE
 import com.bios.walkietalkie2.utils.PermissionsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

@@ -4,12 +4,10 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
-import com.bios.walkietalkie2.utils.AudioUtils.SAMPLE_RATE
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.yield
 import java.net.Socket
 
@@ -22,14 +20,14 @@ class AudioPlayer(private val scope: CoroutineScope) {
         audioPlayingJob = scope.launch(
             context = Dispatchers.IO,
             block = {
-                val bufferSize = AudioUtils.bufferSize
+                val bufferSize = AudioUtils.bufferRecordSize
                 audioTrack = AudioTrack(
                     AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_MEDIA)
                         .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                         .build(),
                     AudioFormat.Builder()
-                        .setSampleRate(SAMPLE_RATE)
+                        .setSampleRate(AudioUtils.bufferRecordSize)
                         .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
                         .setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build(),
                     bufferSize,

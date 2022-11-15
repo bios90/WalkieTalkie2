@@ -1,9 +1,8 @@
 package com.bios.walkietalkie2.models.messages
 
-import com.bios.walkietalkie2.utils.AudioUtils.bufferSize
+import com.bios.walkietalkie2.utils.AudioUtils
 import com.bios.walkietalkie2.utils.enumValueOrNull
 import java.io.IOException
-import java.net.Socket
 import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
 import java.util.*
@@ -52,18 +51,38 @@ data class PongMessage(
     override fun toBytes(buffer: ByteBuffer) = text.strToBytes(buffer)
 }
 
+private val textBuffer = ByteBuffer.allocate(2048)
+private val voiceBuffer = ByteBuffer.allocate(AudioUtils.bufferRecordSize)
+private val headerBuffer = ByteBuffer.allocate(10)
+
 fun sendMessage(msg: BaseMessage, socketChannel: SocketChannel) {
-    val bbMsg = ByteBuffer.allocate(bufferSize)
-    msg.type.name.strToBytes(bbMsg)
+//    val size = if (msg is VoiceMessage) {
+//        bufferSize
+//    } else {
+//        2048
+//    }
+//    val bbMsg = ByteBuffer.allocate(size)
+    val bbMsg = if (msg is VoiceMessage) {
+        voiceBuffer
+    } else {
+        textBuffer
+    }
+    bbMsg.putInt(msg.type.getTypeInt())
     msg.toBytes(bbMsg)
     bbMsg.flip()
+//    msg.type.name.strToBytes(bbMsg)
+//    msg.toBytes(bbMsg)
+//    bbMsg.flip()
 
-    val bbOverall = ByteBuffer.allocate(10)
+//    val bbOverall = ByteBuffer.allocate(10)
+    val bbOverall = headerBuffer.apply { clear() }
     bbOverall.putInt(bbMsg.remaining())
     bbOverall.flip()
 
     val finalData = arrayOf(bbOverall, bbMsg)
     socketChannel.write(finalData)
+    bbMsg.clear()
+    bbOverall.clear()
 }
 
 fun ensureBytesAvailable(socketChannel: SocketChannel, buffer: ByteBuffer, required: Int) {
@@ -82,20 +101,19 @@ fun ensureBytesAvailable(socketChannel: SocketChannel, buffer: ByteBuffer, requi
 }
 
 
-fun readMessage(socketChannel: SocketChannel, dataBuffer: ByteBuffer): BaseMessage {
+fun readMessage(socketChannel: SocketChannel, dataBuffer: ByteBuffer): BaseMessage? {
     ensureBytesAvailable(socketChannel, dataBuffer, 8)
     val length = dataBuffer.int
     ensureBytesAvailable(socketChannel, dataBuffer, length)
-    val typeMessage: TypeMessage? = dataBuffer.toStringMy().let(::enumValueOrNull)
+//    val typeMessage: TypeMessage? = dataBuffer.toStringMy().let(::enumValueOrNull)
+    val typeMessage: TypeMessage? = dataBuffer.int.let(TypeMessage::initFromInt)
     val msg = when (typeMessage) {
         TypeMessage.Ping -> PingMessage()
         TypeMessage.Pong -> PongMessage()
         TypeMessage.Voice -> VoiceMessage()
         else -> null
     }
-    if (msg == null) {
-        throw RuntimeException("Error unknown message")
-    }
-    msg.fromBytes(dataBuffer)
+
+    msg?.fromBytes(dataBuffer)
     return msg
 }

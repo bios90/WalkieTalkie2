@@ -1,17 +1,19 @@
 package com.bios.walkietalkie2
 
+import android.media.AudioTrack
 import android.os.Bundle
 import androidx.lifecycle.lifecycleScope
 import com.bios.walkietalkie2.common.BaseActivity
 import com.bios.walkietalkie2.common.SocketChannelReconnectionHelper
 import com.bios.walkietalkie2.databinding.ActTestMessagesBinding
+import com.bios.walkietalkie2.models.messages.BaseMessage
 import com.bios.walkietalkie2.models.messages.PingMessage
 import com.bios.walkietalkie2.models.messages.PongMessage
 import com.bios.walkietalkie2.models.messages.VoiceMessage
 import com.bios.walkietalkie2.models.messages.readMessage
 import com.bios.walkietalkie2.models.messages.sendMessage
-import com.bios.walkietalkie2.utils.AudioUtils.bufferSize
 import com.bios.walkietalkie2.utils.AudioTools2
+import com.bios.walkietalkie2.utils.AudioUtils.bufferRecordSize
 import com.bios.walkietalkie2.utils.Toast
 import com.bios.walkietalkie2.utils.getArgs
 import com.bios.walkietalkie2.utils.onTouchUpAndDown
@@ -26,9 +28,11 @@ import java.nio.channels.SocketChannel
 class ActTestMessages : BaseActivity() {
 
     private val bndActTestMessages by lazy {
-        ActTestMessagesBinding.inflate(layoutInflater,
+        ActTestMessagesBinding.inflate(
+            layoutInflater,
             null,
-            false)
+            false
+        )
     }
     private val args: ActCall.Args by lazy { requireNotNull(getArgs()) }
     private var socketChannel: SocketChannel? = null
@@ -43,6 +47,7 @@ class ActTestMessages : BaseActivity() {
         )
     }
     private val audioPlayer by lazy { AudioTools2.getAudioPlayer() }
+    private val recorder by lazy { requireNotNull(AudioTools2.getRecorder()) }
     private var jobAudioRecord: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,20 +66,27 @@ class ActTestMessages : BaseActivity() {
                 jobAudioRecord = lifecycleScope.launch(
                     context = Dispatchers.IO,
                     block = {
-                        val recorder = AudioTools2.getRecorder()
-                        recorder?.startRecording()
-                        val audioBuffer = ByteArray(bufferSize - 2048)
-                        while (true && recorder != null && record) {
+                        recorder.startRecording()
+                        audioPlayer.pause()
+                        val audioBuffer = ByteArray(bufferRecordSize)
+                        var msg: VoiceMessage? = null
+                        while (record) {
                             yield()
                             recorder.read(audioBuffer, 0, audioBuffer.size)
-                            val msg = VoiceMessage().apply { bytes = audioBuffer }
-                            sendVoiceMessage(msg)
+                            msg = VoiceMessage().apply { bytes = audioBuffer }
+                            socketChannel?.let {
+                                sendMessage(msg, it)
+                            }
+                            msg.bytes = null
+//                            sendVoiceMessage(msg)
                         }
                     }
                 )
             },
             onUp = {
                 record = false
+                recorder.stop()
+                audioPlayer.play()
                 jobAudioRecord?.cancel()
             }
         )
@@ -84,11 +96,12 @@ class ActTestMessages : BaseActivity() {
         lifecycleScope.launch(
             context = Dispatchers.IO,
             block = {
-                val byteBuffer: ByteBuffer = ByteBuffer.allocate(bufferSize * 4)
+                val byteBuffer: ByteBuffer = ByteBuffer.allocate(bufferRecordSize)
+                var message: BaseMessage?
                 while (true) {
                     yield()
                     if (socketChannel != null && socketChannel?.isOpen == true) {
-                        val message = readMessage(socketChannel!!, byteBuffer)
+                        message = readMessage(socketChannel!!, byteBuffer)
                         when (message) {
                             is PingMessage -> {
                                 withContext(Dispatchers.Main) {
@@ -101,7 +114,18 @@ class ActTestMessages : BaseActivity() {
                                     Toast("Got pong with message\n${message.text} ")
                                 }
                             }
-                            is VoiceMessage -> playAudioMessage(message)
+                            is VoiceMessage -> {
+                                withContext(Dispatchers.Main) {
+                                    Toast("Got audio message")
+                                }
+                                message.receivedBuffer?.let {
+                                    val length = it.int
+                                    audioPlayer.write(it, length, AudioTrack.WRITE_BLOCKING)
+                                    message.bytes = null
+                                    message.receivedBuffer = null
+                                }
+//                                playAudioMessage(message)
+                            }
                         }
                     }
                 }
@@ -136,16 +160,16 @@ class ActTestMessages : BaseActivity() {
         )
     }
 
-    private fun sendVoiceMessage(msg: VoiceMessage) {
-        lifecycleScope.launch(
-            context = Dispatchers.IO,
-            block = {
-                socketChannel?.let {
-                    sendMessage(msg, it)
-                }
-            }
-        )
-    }
+//    private fun sendVoiceMessage(msg: VoiceMessage) {
+//        lifecycleScope.launch(
+//            context = Dispatchers.IO,
+//            block = {
+//                socketChannel?.let {
+//                    sendMessage(msg, it)
+//                }
+//            }
+//        )
+//    }
 
     private fun initAudioPlayer() {
         lifecycleScope.launch(
@@ -156,20 +180,18 @@ class ActTestMessages : BaseActivity() {
         )
     }
 
-    private fun playAudioMessage(msg: VoiceMessage) {
-        lifecycleScope.launch(
-            context = Dispatchers.IO,
-            block = {
-                withContext(Dispatchers.Main) {
-                    Toast("Got audio message")
-                }
-                /*
-                * audioTrack?.write(buffer, 0, buffer.size)
-                                bytesToRead = inps.read(buffer, 0, bufferSize)                * */
-                msg.bytes?.let {
-                    audioPlayer.write(it, 0, it.size)
-                }
-            }
-        )
-    }
+//    private fun playAudioMessage(msg: VoiceMessage) {
+//        lifecycleScope.launch(
+//            context = Dispatchers.IO,
+//            block = {
+//                withContext(Dispatchers.Main) {
+//                    Toast("Got audio message")
+//                }
+//                msg.bytes?.let {
+//                    audioPlayer.write(it, 0, it.size)
+//                    msg.bytes = null
+//                }
+//            }
+//        )
+//    }
 }

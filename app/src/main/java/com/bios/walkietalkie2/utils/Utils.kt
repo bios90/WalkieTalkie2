@@ -21,6 +21,7 @@ import com.bios.walkietalkie2.common.Consts
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.Serializable
+import java.nio.ByteBuffer
 
 fun AppCompatActivity.addLifeCycleObserver(
     onCreate: (LifecycleOwner?) -> Unit = { },
@@ -116,3 +117,19 @@ fun View.onTouchUpAndDown(
 
 inline fun <reified T : Enum<*>> enumValueOrNull(name: String): T? =
     T::class.java.enumConstants.firstOrNull { it.name == name }
+
+fun ByteBuffer.toByteArray() = ByteArray(this.remaining()).also(this::get)
+
+fun bytesToInt(bytes: ByteArray, offset: Int = 0): Int {
+    return (bytes[offset + 3].toInt() shl 24) or
+            (bytes[offset + 2].toInt() and 0xff shl 16) or
+            (bytes[offset + 1].toInt() and 0xff shl 8) or
+            (bytes[offset + 0].toInt() and 0xff)
+}
+
+fun write4BytesToBuffer(buffer: ByteArray, offset: Int, data: Int) {
+    buffer[offset + 0] = (data shr 0).toByte()
+    buffer[offset + 1] = (data shr 8).toByte()
+    buffer[offset + 2] = (data shr 16).toByte()
+    buffer[offset + 3] = (data shr 24).toByte()
+}

@@ -29,11 +29,10 @@ class MicRecorder(private val scope: CoroutineScope) {
             block = {
                 runInterruptible {
                     try {
-                        val bufferSize = AudioUtils.bufferSize
-                        val audioBuffer = ByteArray(bufferSize)
+                        val bufferSize = AudioUtils.bufferRecordSize
                         audioRecord = AudioRecord(
                             MediaRecorder.AudioSource.VOICE_RECOGNITION,
-                            AudioUtils.SAMPLE_RATE,
+                            AudioUtils.bufferRecordSize,
                             AudioFormat.CHANNEL_IN_MONO,
                             AudioFormat.ENCODING_PCM_16BIT,
                             bufferSize
@@ -49,6 +48,7 @@ class MicRecorder(private val scope: CoroutineScope) {
                                 context = Dispatchers.IO,
                                 block = {
                                     try {
+                                        val audioBuffer = ByteArray(bufferSize)
                                         val fos = socket.getOutputStream()
                                         while (true) {
                                             yield()
