@@ -5,4 +5,5 @@ import java.nio.ByteBuffer
 interface ISocketReadable {
     fun getType(): TypeSocketMessage
     fun readFromBytes(bytes: ByteArray, length:Int)
+    fun clear()
 }

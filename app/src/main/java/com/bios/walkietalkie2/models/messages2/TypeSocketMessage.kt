@@ -3,8 +3,9 @@ package com.bios.walkietalkie2.models.messages2
 enum class TypeSocketMessage {
     Ping,
     Pong,
-    VoiceSend,
-    VoiceReceive;
+    Voice,
+    Bye
+    ;
 
     fun getTypeInt() = values().indexOf(this)
 

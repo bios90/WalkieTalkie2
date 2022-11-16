@@ -16,5 +16,11 @@ interface ISocketTextMessage : ISocketReadable, ISocketWritable {
         System.arraycopy(textBytes, 0, bytes, offset, textBytes.size)
     }
 
+    override fun getBytes(): ByteArray = text.toByteArray()
+
     override fun getLength(): Int = text.toByteArray().size
+
+    override fun clear() {
+        this.text = ""
+    }
 }

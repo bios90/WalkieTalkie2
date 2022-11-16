@@ -5,7 +5,7 @@ import android.media.AudioRecord
 import android.media.AudioTrack
 
 object AudioUtils {
-    val SAMPLE_RATE = 16000
+    val SAMPLE_RATE = 8000
     val bufferRecordSize
         get() = getMinimumBufferSize()
 

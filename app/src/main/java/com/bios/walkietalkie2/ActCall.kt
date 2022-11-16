@@ -32,7 +32,7 @@ class ActCall : AppCompatActivity() {
         SocketReconnectionHelper(
             act = this,
             args = args,
-            onRecreated = {
+            onSocketChecked = {
                 socket = it
                 socket?.let {
                     audioPlayer.stopPlayingFromSocket()
