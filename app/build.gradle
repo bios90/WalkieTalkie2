@@ -36,6 +36,7 @@ android {
 }
 
 dependencies {
+    implementation "com.google.android.gms:play-services:12.0.1"
     implementation 'com.tonystark.android:socket:4.2.2'
     implementation 'com.tonystark.android:socket-server:4.2.2'
 

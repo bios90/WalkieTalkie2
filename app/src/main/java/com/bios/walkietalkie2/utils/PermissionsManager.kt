@@ -26,7 +26,7 @@ class PermissionsManager(private val act: AppCompatActivity) : ForceInitializabl
     fun checkPermissions(
         onGranted: () -> Unit,
         onDenied: () -> Unit,
-        permissions: List<String> = appPermissions,
+        permissions: List<String> = voicePermissions,
     ) {
         if (arePermissionsGranted(permissions)) {
             onGranted.invoke()
@@ -42,14 +42,16 @@ class PermissionsManager(private val act: AppCompatActivity) : ForceInitializabl
         permissionsResultListener.launch(permissions.toTypedArray())
     }
 
-    fun arePermissionsGranted() = arePermissionsGranted(appPermissions)
+    fun arePermissionsGranted() = arePermissionsGranted(voicePermissions)
 
     fun arePermissionsGranted(permissions: List<String>): Boolean = permissions.all {
         ContextCompat.checkSelfPermission(act, it) == PackageManager.PERMISSION_GRANTED
     }
 
     companion object {
-        val appPermissions =
+        val voicePermissions =
             listOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.ACCESS_COARSE_LOCATION)
+        val locationPermissions =
+            listOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION)
     }
 }

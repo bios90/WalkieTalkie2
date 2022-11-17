@@ -9,7 +9,7 @@ import java.net.Socket
 
 object SocketHelper {
     private const val PORT_USED = 9584
-    private const val TIMEOUT = 10000
+    private const val TIMEOUT = 3000
 
     fun startServerSocket(): Socket? {
         try {
