@@ -2,10 +2,10 @@ package com.bios.walkietalkie2
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.net.NetworkInfo
 import android.net.wifi.p2p.WifiP2pInfo
 import android.net.wifi.p2p.WifiP2pManager
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bios.walkietalkie2.common.BaseActivity
@@ -13,12 +13,7 @@ import com.bios.walkietalkie2.common.CompositeAdapter
 import com.bios.walkietalkie2.common.adapterDelegateDevice
 import com.bios.walkietalkie2.databinding.ActPeersListBinding
 import com.bios.walkietalkie2.models.ModelDevice
-import com.bios.walkietalkie2.utils.Toast
-import com.bios.walkietalkie2.utils.connectToAddress
-import com.bios.walkietalkie2.utils.createWifiDirectReceiver
-import com.bios.walkietalkie2.utils.purArgs
-import com.bios.walkietalkie2.utils.toVisibility
-import com.bios.walkietalkie2.utils.tryTurnWifiOn
+import com.bios.walkietalkie2.utils.*
 import java.net.InetAddress
 
 class ActPeersList : BaseActivity() {
@@ -38,8 +33,9 @@ class ActPeersList : BaseActivity() {
             )
         )
         .build()
-    var deviceToConnect: ModelDevice? = null
-    var currentCallAddress: InetAddress? = null
+    private var deviceToConnect: ModelDevice? = null
+    private var currentCallAddress: InetAddress? = null
+    private var currentWifiInfo: WifiP2pInfo? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -73,7 +69,7 @@ class ActPeersList : BaseActivity() {
         createWifiDirectReceiver(
             act = this,
             onP2pStateChanged = ::handleWifiEnabledChange,
-            onPeersChanged = ::reloadPeers,
+            onPeersChanged = ::handlePeersChanged,
             onConnectionChanged = ::handleConnectionChanged
         )
     }
@@ -96,19 +92,21 @@ class ActPeersList : BaseActivity() {
     }
 
     @SuppressLint("MissingPermission")
-    private fun reloadPeers() {
-        wifiManager.requestPeers(
-            connectionChannel,
-            {
-                foundDevices = it.deviceList.map {
-                    it.isGroupOwner
-                    ModelDevice(
-                        macAddress = it.deviceAddress,
-                        name = it.deviceName
-                    )
-                }
+    private fun handlePeersChanged() {
+        if (deviceToConnect != null) {
+            sendChangedConnectivity()
+            deviceToConnect = null
+            return
+        }
+        wifiManager.requestPeers(connectionChannel) {
+            foundDevices = it.deviceList.map {
+                it.isGroupOwner
+                ModelDevice(
+                    macAddress = it.deviceAddress,
+                    name = it.deviceName
+                )
             }
-        )
+        }
     }
 
     private fun handleWifiEnabledChange(isEnabled: Boolean) {
@@ -119,7 +117,13 @@ class ActPeersList : BaseActivity() {
     }
 
     private fun handleConnectionChanged(wifiInfo: WifiP2pInfo?) {
-        val isConnected = wifiInfo != null && wifiInfo.groupOwnerAddress != null
+        wifiInfo?.let { currentWifiInfo = it }
+        sendChangedConnectivity()
+    }
+
+    private fun sendChangedConnectivity() {
+        val wifiInfo = currentWifiInfo
+        val isConnected = wifiInfo?.groupOwnerAddress != null
         if (isConnected && currentCallAddress == null) {
             currentCallAddress = wifiInfo!!.groupOwnerAddress
             val args = ActCall.Args(
@@ -131,7 +135,6 @@ class ActPeersList : BaseActivity() {
         }
     }
 
-
     private fun onDeviceClicked(
         device: ModelDevice,
     ) {
@@ -140,6 +143,13 @@ class ActPeersList : BaseActivity() {
             address = device.macAddress,
             onSuccess = {
                 deviceToConnect = device
+                sendChangedConnectivity()
+                wifiManager.requestConnectionInfo(connectionChannel) { wifiInfo ->
+                    currentWifiInfo = wifiInfo
+                }
+            },
+            onError = {
+                Log.e("ActPeersList", "failed to connect to $device")
             }
         )
     }
